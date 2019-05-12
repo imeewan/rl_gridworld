@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Dec 13 11:46:29 2018
+Created on Fri May  3 17:33:55 2019
 
 @author: acer
 """
 
 import numpy as np
+import random
 
 class Grid:
     def __init__(self, width, height, start_x, start_y):
@@ -14,11 +15,12 @@ class Grid:
         self.i = start_x
         self.j = start_y
         
-    def reward_action(self, reward, action):
+    def reward_action(self, reward, action, action_start):
         # rewards should be a dict of: (i, j): r (row, col): reward
         # actions should be a dict of: (i, j): A (row, col): list of possible actions
         self.reward = reward
         self.action = action
+        self.action_start = action_start
         
     def set_state(self, si, sj):
         self.i = si
@@ -92,8 +94,8 @@ def v_init(width, height):
                 val = -10
 
             else:
-                val = np.random.randn()
-#                val = 0
+#                val = np.random.randn()
+                val = 0
                 
             if s != (1, 1):
                 V.update({s: val})  
@@ -131,8 +133,14 @@ action = {(0, 0): ('D', 'R'),
     (2, 2): ('L', 'R', 'U'),
     (2, 3): ('L', 'U'),}
 
+action_start = {
+                 (0, 0): ('D', 'R'),
+                (1, 0): ('U', 'D'),
+                (2, 0): ('U', 'R'),
+                (2, 3): ('L', 'U')
+                }
 
-g.reward_action(reward, action)
+g.reward_action(reward, action, action_start)
 V = v_init(3, 4)
 P = policy_sel(V, 3, 4)
 
@@ -155,62 +163,42 @@ print_policy(P, g)
 #action.keys()
 #action[(0, 0)]
 
-#policy Evaluation
-V = v_init(3, 4)
-P = policy_sel(V, 3, 4)
-small_number = 0.8
+#monte carlo
 
-for i in range(1000):
-    temp  = set(V.values())
-    for s in action.keys():
-        si, sj = s
-        g.set_state(si, sj)
-        new_v = 0
-        delta = 0
-        pos_act = g.action[s]
+for i in range(100):
+    #random starting point
+    sp_i, sp_j = list(g.action.keys())[random.randint(0,len(g.action.keys())-1)]
+    state_reward = []
+    g.set_state(sp_i, sp_j)
+    loop = True
+    while loop:
+        gv = 0
+        state_reward.append(((sp_i, sp_j), V[(sp_i, sp_j)]))
+        if (sp_i, sp_j) == (0, 3) or (sp_i, sp_j) == (1, 3):
+            state_reward.reverse()
+            for j in range(len(state_reward)):
+                x, y = state_reward[j][0]
+                
+                gv = -1.5 + 0.9*gv
 
-        for pos in pos_act:
-            e = 1 / len(pos_act)
-            g.set_state(si, sj)
-            g.move(pos)
-            v = V[g.where()]
-            new_v += e*(v*small_number - 2)
-        
-        if i % 1000 == 0:
-            print(i)
+                if (x, y) == (0, 3) or (x, y) == (1, 3):
+                    gv = V[(x, y)]
+                else:
+                    V[(x, y)] = V[(x, y)] + (1/(100))*(gv - V[(x, y)])
+                
+            loop = False
+        else:
+            act = str(g.action[(sp_i, sp_j)][random.randint(0,len(g.action[(sp_i, sp_j)])-1)])
+
+            g.move(act)
+            sp_i, sp_j = g.where()[0], g.where()[1]
             
-        V[si, sj] = new_v
-        
- 
-print_values(V, g)
+
 P = policy_sel(V, 3, 4)
+
+print_values(V, g)
 print_policy(P, g)
 
-#Value iteration  
-V = v_init(3, 4)
-P = policy_sel(V, 3, 4)
-small_number = 0.9
-for i in range(1000):
-    temp  = set(V.values())
-    for s in action.keys():
-        si, sj = s
-        g.set_state(si, sj)
-        curr_v = -100
-        pos_act = g.action[s]
 
-        for pos in pos_act:
-            e = 1 / len(pos_act)
-            g.set_state(si, sj)
-            g.move(pos)
-            v = V[g.where()]
-            new_v = e*(v*small_number - 2)
-            
-            if new_v >= curr_v:
-                curr_v = new_v
-            
-        V[si, sj] = curr_v
-        
-print_values(V, g)
-P = policy_sel(V, 3, 4)
-print_policy(P, g)
+
 

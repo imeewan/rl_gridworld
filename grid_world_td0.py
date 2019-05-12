@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Dec 13 11:46:29 2018
+Created on Sat May 11 23:34:40 2019
 
 @author: acer
 """
 
+
 import numpy as np
+import random
 
 class Grid:
     def __init__(self, width, height, start_x, start_y):
@@ -14,11 +16,12 @@ class Grid:
         self.i = start_x
         self.j = start_y
         
-    def reward_action(self, reward, action):
+    def reward_action(self, reward, action, action_start):
         # rewards should be a dict of: (i, j): r (row, col): reward
         # actions should be a dict of: (i, j): A (row, col): list of possible actions
         self.reward = reward
         self.action = action
+        self.action_start = action_start
         
     def set_state(self, si, sj):
         self.i = si
@@ -45,7 +48,8 @@ class Grid:
             if act == "R":
                 self.j += 1
         else:
-            print("action not allowed")
+            pass
+#            print("action not allowed")
             
     def where(self):
         return self.i, self.j
@@ -92,8 +96,8 @@ def v_init(width, height):
                 val = -10
 
             else:
-                val = np.random.randn()
-#                val = 0
+#                val = np.random.randn()
+                val = 0
                 
             if s != (1, 1):
                 V.update({s: val})  
@@ -131,86 +135,80 @@ action = {(0, 0): ('D', 'R'),
     (2, 2): ('L', 'R', 'U'),
     (2, 3): ('L', 'U'),}
 
+action_start = {
+#                 (0, 0): ('D', 'R'),
+#                (1, 0): ('U', 'D'),
+                (2, 0): ('U', 'R'),
+#                (2, 3): ('L', 'U')
+                }
 
-g.reward_action(reward, action)
+g.reward_action(reward, action, action_start)
 V = v_init(3, 4)
 P = policy_sel(V, 3, 4)
 
-print_values(V, g)
-print_policy(P, g)
+for i in range(50):
+    sp_i, sp_j = list(g.action_start.keys())[random.randint(0,len(g.action_start.keys())-1)]
+    g.set_state(sp_i, sp_j)
+    loop = True
+    while loop:
 
-#g.reward_action(reward, action)
-#g.move('R')
-#g.where()
-#print(g.is_terminal(g.where()[0], g.where()[1]))
-#g.game_over()
-
-
-#attrs = vars(g)
-#print(attrs.items())
-
-#g.all_states()
-
-#action.values()
-#action.keys()
-#action[(0, 0)]
-
-#policy Evaluation
-V = v_init(3, 4)
-P = policy_sel(V, 3, 4)
-small_number = 0.8
-
-for i in range(1000):
-    temp  = set(V.values())
-    for s in action.keys():
-        si, sj = s
-        g.set_state(si, sj)
+#            return_ij = -1 + 0.9*V[(sp_i, sp_j)])
+#            V[(sp_i, sp_j)] = V[(sp_i, sp_j)] + (1/(1000))*(return_ij - V[(sp_i, sp_j)])
+            
         new_v = 0
-        delta = 0
-        pos_act = g.action[s]
-
-        for pos in pos_act:
-            e = 1 / len(pos_act)
-            g.set_state(si, sj)
-            g.move(pos)
-            v = V[g.where()]
-            new_v += e*(v*small_number - 2)
-        
-        if i % 1000 == 0:
-            print(i)
-            
-        V[si, sj] = new_v
-        
- 
-print_values(V, g)
-P = policy_sel(V, 3, 4)
-print_policy(P, g)
-
-#Value iteration  
-V = v_init(3, 4)
-P = policy_sel(V, 3, 4)
-small_number = 0.9
-for i in range(1000):
-    temp  = set(V.values())
-    for s in action.keys():
-        si, sj = s
-        g.set_state(si, sj)
         curr_v = -100
-        pos_act = g.action[s]
-
-        for pos in pos_act:
-            e = 1 / len(pos_act)
-            g.set_state(si, sj)
-            g.move(pos)
-            v = V[g.where()]
-            new_v = e*(v*small_number - 2)
+        pos_act = g.action[(sp_i, sp_j)]
+        curr_i, curr_j = sp_i, sp_j
             
-            if new_v >= curr_v:
+        for curr_act in g.action[(curr_i, curr_j)]:
+            g.move(curr_act)
+            new_i, new_j = g.where()
+            new_v = V[(new_i, new_j)]
+                
+            if curr_v <= new_v:
                 curr_v = new_v
+                act = curr_act
+            else:
+                curr_v = curr_v
+                    
+        rand = random.randint(1,10)
             
-        V[si, sj] = curr_v
+        if rand >= 3:
+            act = act
+        else:
+            act = str(g.action[(sp_i, sp_j)][random.randint(0,len(g.action[(sp_i, sp_j)])-1)])
+                
+        g.set_state(curr_i, curr_j)
+        g.move(act)
+        sp_i, sp_j = g.where()[0], g.where()[1]
         
-print_values(V, g)
+        V[(curr_i, curr_j)] = V[(curr_i, curr_j)] + (1/(50))*((-1 + 0.9*V[(sp_i, sp_j)]) - V[(curr_i, curr_j)])
+            
+        if (sp_i, sp_j) == (0, 3) or (sp_i, sp_j) == (1, 3):
+            loop = False
+
 P = policy_sel(V, 3, 4)
+
+print_values(V, g)
 print_policy(P, g)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
